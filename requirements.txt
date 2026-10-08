@@ -1,0 +1,7 @@
+transformers
+torch
+sentencepiece
+scikit-learn
+fastapi
+uvicorn
+pydanticpytest
