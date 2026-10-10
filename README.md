@@ -1,267 +1,206 @@
-Multilingual Sentiment Analysis and Escalation System
 
-1. Project Overview
+# Multilingual Sentiment Analysis and Support Ticket Workflow
 
-This project is a multilingual customer conversation analysis system developed as part of an internship task.
+## 1. Project Overview
 
-The system analyzes customer messages and conversation history to identify:
+This project combines multilingual customer conversation analysis with an automated support ticket workflow.
 
-Positive sentiment
-Neutral sentiment
-Negative sentiment
-Frustration
-Urgency
-Sarcasm
-High-risk issues
-Confidence scores
+It analyzes customer messages, detects sentiment and risk, recommends response tone, evaluates escalation conditions, and processes support tickets.
 
-Based on the analysis, the system determines the appropriate response tone and escalation action.
+## 2. Key Features
 
+### Multilingual Sentiment Analysis
+- Transformer-based sentiment classification using XLM-RoBERTa.
+- Positive, neutral, and negative sentiment labels.
+- Confidence scores for predictions.
+- Conversation-level sentiment statistics.
 
+### Customer Message Analysis
+- Frustration detection.
+- Urgency detection.
+- Sarcasm detection.
+- Risk detection for account compromise, duplicate payments, and legal threats.
+- Response tone recommendations.
 
-2. Key Features
+### Conversation Escalation
+- Escalation for high-risk issues.
+- Escalation for repeated negative messages.
+- Escalation for unresolved negative conversations exceeding the configured threshold.
+- Business-hours and after-hours escalation queues.
+- Structured escalation logging.
 
-Sentiment Analysis
+### Support Ticket Workflow
+- Extract customer, order, product, issue, contact, and evidence details.
+- Detect missing information.
+- Detect duplicate tickets.
+- Calculate ticket priority.
+- Evaluate SLA usage, warnings, and breaches.
+- Route tickets using agent skills, availability, workload, and on-call status.
+- Group related issues and separate unrelated issues.
+- Generate handoff summaries with masked contact details.
+- Record SLA breach escalation events.
 
-The system uses a multilingual transformer-based sentiment model to analyze messages in different languages.
+## 3. Technologies
 
-Supported examples include:
+- Python
+- Hugging Face Transformers
+- XLM-RoBERTa
+- PyTorch
+- FastAPI
+- Pydantic
+- Pytest
 
-English
-Hindi
-Telugu
+## 4. Project Structure
 
-The system returns:
-
-Sentiment
-Confidence score
-
-Frustration Detection
-
-The system identifies common frustration expressions such as:
-
-"Nobody is helping"
-"Already told you"
-"Still waiting"
-"This is ridiculous"
-
-Urgency Detection
-
-The system identifies urgent expressions such as:
-
-"Urgent"
-"Immediately"
-"ASAP"
-"Help me now"
-
-Sarcasm Detection
-
-The system detects common sarcastic expressions such as:
-
-"Wow, amazing service"
-"Thanks for nothing"
-"Great job"
-
-When a positive model prediction is detected as sarcasm, the final sentiment can be adjusted to negative.
-
-Risk Detection
-
-The system identifies high-risk situations including:
-
-Account compromise
-Duplicate payment
-Legal threats
-
-High-risk messages trigger escalation.
-
-
-
-3. Escalation Rules
-
-The system follows these escalation conditions:
-
-High-Risk Issues
-
-Account compromise, duplicate payments and legal threats trigger priority escalation.
-
-Repeated Negative Messages
-
-Three or more negative messages trigger escalation.
-
-Unresolved Negative Conversation
-
-A negative conversation unresolved for more than 15 minutes triggers escalation.
-
-Urgent Complaints During Business Hours
-
-Urgent negative or frustrated complaints trigger priority escalation.
-
-Urgent Complaints Outside Business Hours
-
-Urgent complaints received outside business hours are sent to the `on_call` queue.
-
-Normal Complaints Outside Business Hours
-
-Normal negative complaints received outside business hours are scheduled for the `next_working_day`.
-
-
-4. Response Tone
-
-The system adjusts the response tone based on the analysis.
-
-Situation | Response Tone |
-
-Positive | Friendly |
-Neutral | Professional |
-Negative | Empathetic |
-Frustrated | Empathetic |
-Urgent | Urgent and reassuring |
-Sarcastic | Empathetic |
-High-risk | Serious and reassuring |
-
-The system changes the response tone without changing the underlying business policy.
-
-
-
-5. Escalation Logging
-
-Every escalation produces a structured log containing:
-
-Timestamp
-Escalation status
-Reason
-Activated condition
-Queue
-Conversation summary
-
-6. Conversation Tracking
-
-The system analyzes the complete conversation instead of only the latest message.
-
-It tracks:
-
-Total messages
-Negative message count
-Frustrated message count
-Urgent message count
-Unresolved negative duration
-
-7. project structure 
-
+```text
 MultilingualSentimentAnalysis/
-│
 ├── app/
-│   ├── analyzer.py
 │   ├── api.py
+│   ├── main.py
+│   ├── analyzer.py
+│   ├── sentiment.py
 │   ├── conversation.py
 │   ├── conversation_state.py
 │   ├── escalation.py
 │   ├── escalation_log.py
-│   ├── main.py
-│   ├── message_analysis.py
 │   ├── response_tone.py
 │   ├── risk_detection.py
-│   ├── sentiment.py
+│   ├── message_analysis.py
 │   ├── time_utils.py
-│   │
-│   └── test_*.py
-│
-├── data/
+│   ├── ticket_extraction.py
+│   ├── missing_info.py
+│   ├── priority.py
+│   ├── sla.py
+│   ├── duplicate_detection.py
+│   ├── routing.py
+│   ├── issue_grouping.py
+│   ├── handoff.py
+│   └── ticket_workflow.py
 ├── tests/
 ├── requirements.txt
+├── pytest.ini
 ├── .gitignore
 └── README.md
+```
 
+## 5. Installation
 
-8. Technologies Used
-Python
-Hugging Face Transformers
-XLM-RoBERTa
-PyTorch
-FastAPI
-Pydantic
-SentencePiece
+Create a virtual environment:
 
-9. Installation
+```powershell
+python -m venv venv
+```
 
-Create and activate a virtual environment:- python -m venv venv
+Activate it in Windows PowerShell:
 
-Windows PowerShell:- .\venv\Scripts\Activate.ps1
+```powershell
+.\venv\Scripts\Activate.ps1
+```
 
-Install dependencies:- pip install -r requirements.txt
+Install dependencies:
 
+```powershell
+python -m pip install -r requirements.txt
+```
 
+Run commands from the project root directory.
 
-10. Running the Application
+## 6. Running the API
 
-Navigate to the application directory:- cd app
+Start the FastAPI server:
 
-Run the FastAPI server:- uvicorn api:app --reload
+```powershell
+python -m uvicorn app.api:app --reload
+```
 
-The API will start locally.
+Open the interactive API documentation:
 
-Open the Swagger documentation:- http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/docs
 
+### API Endpoints
 
-11. API Endpoint
-GET /
-
-Checks whether the API is running.
-
-POST /analyze
-
-Analyzes a customer conversation.
+- `GET /` - Check API status.
+- `POST /analyze` - Analyze a customer conversation.
 
 Example request:
 
+```json
 {
   "messages": [
     "My payment failed.",
-    "I already told you about this.",
+    "I have contacted support several times.",
     "Nobody is helping me."
   ],
-  "start_time": "2026-10-07T10:00:00",
-  "current_time": "2026-10-07T10:16:00"
+  "start_time": "2026-10-08T10:00:00",
+  "current_time": "2026-10-08T10:30:00"
 }
+```
 
-The API returns sentiment analysis, conversation statistics, response tone, escalation information and an escalation log.
+The response includes sentiment analysis, conversation statistics, unresolved duration, escalation information, response tone, and an escalation log result.
 
-12. Testing
+## 7. Running the Support Ticket Workflow
 
-The project includes tests for:
+The ticket workflow can be called from Python.
 
-Sentiment analysis
-Multilingual sentiment
-Message analysis
-Conversation analysis
-Conversation state
-Escalation
-Escalation logging
-High-risk issues
-Response tone
-Risk detection
-Time handling
-Full system integration
+Example:
 
-Testing also includes simulated time changes for after-hours and unresolved-conversation scenarios.
+```python
+from datetime import datetime, timedelta
+from pprint import pprint
+from app.ticket_workflow import create_support_ticket
 
-13. Assumptions
+now = datetime.now()
 
-The following implementation assumptions were made because exact values were not specified in the task:
+result = create_support_ticket(
+    messages=[
+        "My name is Devi. Order ID: ORD12345. "
+        "Product: Wireless Headphones. "
+        "Contact: devi@example.com. "
+        "Issue: My payment was deducted twice. "
+        "Evidence: receipt screenshot available."
+    ],
+    start_time=now - timedelta(minutes=30),
+    current_time=now,
+    agents=[
+        {
+            "name": "Billing Agent",
+            "skills": ["billing"],
+            "available": True,
+            "workload": 2,
+            "on_call": False
+        }
+    ]
+)
 
-Business hours are assumed to be 09:00–18:00.
-Repeated negative messages are defined as 3 or more negative messages.
-Unresolved escalation occurs when the negative conversation exceeds 15 minutes.
-Time values can be simulated during testing to validate time-dependent behavior.
+pprint(result)
+```
 
-14. Limitations
+The workflow returns the ticket status, extracted details, missing information, duplicate detection result, SLA evaluation, priority, routing result, escalation result, issue grouping, and handoff summary.
 
-The sentiment model provides multilingual sentiment analysis, while some rule-based detectors such as urgency, sarcasm and risk detection rely on predefined phrases.
+## 8. Running Tests
 
-The current implementation is intended as an internship prototype and can be extended with larger multilingual rule sets, persistent databases and more advanced classification models.
+Run the automated test suite from the project root:
 
-15. Conclusion
+```powershell
+python -m pytest -q
+```
 
-This project demonstrates a multilingual customer conversation analysis system that combines transformer-based sentiment analysis with rule-based conversation monitoring, risk detection, response tone adjustment and automated escalation.
+The project has passed 42 automated tests in the current development session. Run the command again after making changes to verify the latest code.
 
-The system is designed to identify customer sentiment and risk conditions while ensuring that urgent and high-risk situations are escalated appropriately.
+## 9. Implementation Assumptions
+
+- Business hours and SLA limits follow the values configured in the application.
+- SLA calculations depend on the configured business-hours, weekend, and holiday rules.
+- Agent routing depends on required skills, availability, workload, and on-call status.
+- Ticket extraction and certain risk or sentiment indicators use a combination of model predictions and rule-based logic.
+
+## 10. Limitations
+
+- Rule-based extraction and detection can miss phrasing that does not match the implemented patterns.
+- The sentiment model can misclassify ambiguous or context-dependent messages.
+- Agent availability and workload are supplied to the workflow rather than retrieved from a live workforce system.
+- The project is a prototype and can be extended with persistent ticket storage, authentication, monitoring, and production deployment.
+
+## 11. Conclusion
+
+This project demonstrates multilingual customer sentiment analysis and an automated support ticket workflow, including risk detection, escalation, SLA monitoring, duplicate detection, skill-based routing, issue grouping, and handoff summaries.

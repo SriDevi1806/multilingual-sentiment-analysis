@@ -1,12 +1,12 @@
-from sentiment import analyze_sentiment
+from app.sentiment import analyze_sentiment
 
-from message_analysis import (
+from app.message_analysis import (
     detect_frustration,
     detect_urgency,
     detect_sarcasm
 )
 
-from risk_detection import detect_risks
+from app.risk_detection import detect_risks
 
 
 def analyze_message(message):

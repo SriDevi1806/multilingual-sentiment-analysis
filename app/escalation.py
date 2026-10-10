@@ -1,4 +1,4 @@
-from time_utils import get_hour
+from app.time_utils import get_hour
 
 
 BUSINESS_START = 9
