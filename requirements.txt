@@ -4,4 +4,5 @@ sentencepiece
 scikit-learn
 fastapi
 uvicorn
-pydanticpytest
+pydantic
+pytest

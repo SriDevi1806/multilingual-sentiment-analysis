@@ -1,4 +1,5 @@
 # Risk detection for customer messages
+import re
 
 RISK_PATTERNS = {
     "security": [
@@ -54,7 +55,7 @@ def detect_risks(message):
 
         for pattern in patterns:
 
-            if pattern in text:
+            if re.search(rf"\b{re.escape(pattern)}\b", text):
                 detected_risks.append(risk_type)
                 break
 
