@@ -30,11 +30,53 @@ class KnowledgeUpdateWorker:
         self.poll_interval_seconds = poll_interval_seconds
         self._stop_event = threading.Event()
         self._thread = None
+        self._recovery_complete = False
+
+    def _ensure_recovered(self, now, outcomes):
+        """Recover interrupted jobs before processing new work."""
+        if self._recovery_complete:
+            return True
+
+        recover = getattr(
+            self.pipeline,
+            "recover_interrupted_jobs",
+            None,
+        )
+
+        # Support lightweight test doubles and compatible pipelines.
+        if not callable(recover):
+            self._recovery_complete = True
+            return True
+
+        try:
+            recovered = recover(role="admin", now=now)
+        except Exception as exc:
+            logger.exception("Interrupted-job recovery failed")
+            outcomes.append({
+                "status": "recovery_failed",
+                "error_type": type(exc).__name__,
+            })
+            return False
+
+        self._recovery_complete = True
+
+        recovered_count = (
+            len(recovered) if recovered is not None else 0
+        )
+        logger.info(
+            "Interrupted-job recovery completed: %s job(s)",
+            recovered_count,
+        )
+        return True
 
     def run_once(self, now=None):
-        """Process due updates and pending health checks once."""
+        """Recover interrupted jobs and process one worker cycle."""
         now = now or datetime.now().astimezone()
         outcomes = []
+
+        # Do not process jobs until recovery succeeds.
+        if not self._ensure_recovered(now, outcomes):
+            return outcomes
 
         # Take a snapshot so job state changes do not affect iteration.
         jobs = list(self.pipeline.scheduler.jobs.items())
@@ -54,8 +96,8 @@ class KnowledgeUpdateWorker:
                                 "status": result.status,
                             })
                         except Exception as exc:
-                            # activate_due records activation failures
-                            # and schedules retries through the scheduler.
+                            # The pipeline should record activation failures
+                            # and schedule retries through the scheduler.
                             logger.exception(
                                 "Update activation failed for job %s",
                                 job_id,
@@ -67,11 +109,19 @@ class KnowledgeUpdateWorker:
                             })
 
                 elif job.status == "health_check":
-                    self._check_pending_health(job_id, job, now, outcomes)
+                    self._check_pending_health(
+                        job_id,
+                        job,
+                        now,
+                        outcomes,
+                    )
 
             except Exception as exc:
                 # One job should not prevent other jobs from being processed.
-                logger.exception("Worker failed while processing %s", job_id)
+                logger.exception(
+                    "Worker failed while processing %s",
+                    job_id,
+                )
                 outcomes.append({
                     "job_id": job_id,
                     "status": "worker_error",
@@ -85,7 +135,10 @@ class KnowledgeUpdateWorker:
             try:
                 healthy = self.health_check(job.candidate_version)
             except Exception:
-                logger.exception("Health check errored for job %s", job_id)
+                logger.exception(
+                    "Health check errored for job %s",
+                    job_id,
+                )
                 healthy = False
 
             if healthy is not None:
@@ -101,8 +154,7 @@ class KnowledgeUpdateWorker:
                 })
                 return
 
-        # If no result arrived, check whether the five-minute
-        # health deadline has expired.
+        # If no result arrived, check whether the health deadline expired.
         if job.health_deadline is not None and now >= job.health_deadline:
             result = self.pipeline.check_health_timeout(
                 job_id=job_id,

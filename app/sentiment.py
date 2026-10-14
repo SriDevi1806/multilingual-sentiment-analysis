@@ -1,4 +1,3 @@
-
 import os
 
 import torch
@@ -9,36 +8,50 @@ LOCAL_ONLY = os.getenv("HF_LOCAL_ONLY", "false").lower() == "true"
 
 torch.set_num_threads(1)
 
-sentiment_model = pipeline(
-    task="sentiment-analysis",
-    model=MODEL_NAME,
-    tokenizer=MODEL_NAME,
-    device=-1,
-    local_files_only=LOCAL_ONLY,
-)
+sentiment_model = None
 
-# Targeted phrase rules for clear Hindi and Telugu expressions.
-# These rules supplement the model; they do not cover every sentence.
+
+def _get_sentiment_model():
+    global sentiment_model
+
+    if sentiment_model is None:
+        options = {}
+        if LOCAL_ONLY:
+            options["local_files_only"] = True
+
+        sentiment_model = pipeline(
+            task="sentiment-analysis",
+            model=MODEL_NAME,
+            tokenizer=MODEL_NAME,
+            device=-1,
+            **options,
+        )
+
+    return sentiment_model
+
+
 MULTILINGUAL_RULES = {
     "negative": [
-        "पसंद नहीं है",
-        "बिल्कुल पसंद नहीं",
-        "पसंद नहीं",
-        "असंतुष्ट",
-        "असंतुष्ट हूं",
-        "నచ్చలేదు",
-        "బాగాలేదు",
-        "చెడ్డగా ఉంది",
-        "అసంతృప్తిగా",
+        # Hindi
+        "\u092c\u093f\u0932\u094d\u0915\u0941\u0932 \u092a\u0938\u0902\u0926 \u0928\u0939\u0940\u0902",
+        "\u092a\u0938\u0902\u0926 \u0928\u0939\u0940\u0902",
+        "\u0905\u0938\u0902\u0924\u0941\u0937\u094d\u091f",
+        # Telugu
+        "\u0c28\u0c1a\u0c4d\u0c1a\u0c32\u0c47\u0c26\u0c41",
+        "\u0c2c\u0c3e\u0c17\u0c3e\u0c32\u0c47\u0c26\u0c41",
+        "\u0c1a\u0c46\u0c21\u0c4d\u0c21\u0c17\u0c3e \u0c09\u0c02\u0c26\u0c3f",
+        "\u0c05\u0c38\u0c02\u0c24\u0c43\u0c2a\u0c4d\u0c24\u0c3f\u0c17\u0c3e",
     ],
     "positive": [
-        "बहुत पसंद है",
-        "पसंद है",
-        "बहुत अच्छा",
-        "చాలా నచ్చింది",
-        "నాకు నచ్చింది",
-        "బాగుంది",
-        "చాలా బాగుంది",
+        # Hindi
+        "\u092c\u0939\u0941\u0924 \u092a\u0938\u0902\u0926 \u0939\u0948",
+        "\u092a\u0938\u0902\u0926 \u0939\u0948",
+        "\u092c\u0939\u0941\u0924 \u0905\u091a\u094d\u091b\u093e",
+        # Telugu
+        "\u0c1a\u0c3e\u0c32\u0c3e \u0c28\u0c1a\u0c4d\u0c1a\u0c3f\u0c02\u0c26\u0c3f",
+        "\u0c28\u0c3e\u0c15\u0c41 \u0c28\u0c1a\u0c4d\u0c1a\u0c3f\u0c02\u0c26\u0c3f",
+        "\u0c2c\u0c3e\u0c17\u0c41\u0c02\u0c26\u0c3f",
+        "\u0c1a\u0c3e\u0c32\u0c3e \u0c2c\u0c3e\u0c17\u0c41\u0c02\u0c26\u0c3f",
     ],
 }
 
@@ -49,8 +62,6 @@ def analyze_sentiment(message):
 
     normalized = " ".join(message.lower().split())
 
-    # Check negative expressions first to avoid overriding them
-    # with a positive match in a longer sentence.
     for phrase in MULTILINGUAL_RULES["negative"]:
         if phrase in normalized:
             return {
@@ -68,7 +79,7 @@ def analyze_sentiment(message):
             }
 
     with torch.inference_mode():
-        result = sentiment_model(message)[0]
+        result = _get_sentiment_model()(message)[0]
 
     return {
         "sentiment": result["label"].lower(),
