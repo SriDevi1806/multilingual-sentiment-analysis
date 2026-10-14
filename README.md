@@ -5,17 +5,20 @@
 
 This project combines multilingual customer conversation analysis with an automated support ticket workflow.
 
-It analyzes customer messages, detects sentiment and risk, recommends response tone, evaluates escalation conditions, and processes support tickets.
+It analyzes customer messages, detects sentiment and risk, recommends response tone, evaluates escalation conditions, processes support tickets, and manages knowledge-base updates.
 
 ## 2. Key Features
 
 ### Multilingual Sentiment Analysis
+
 - Transformer-based sentiment classification using XLM-RoBERTa.
 - Positive, neutral, and negative sentiment labels.
 - Confidence scores for predictions.
+- Support for multilingual sentiment detection, including Hindi and Telugu.
 - Conversation-level sentiment statistics.
 
 ### Customer Message Analysis
+
 - Frustration detection.
 - Urgency detection.
 - Sarcasm detection.
@@ -23,6 +26,7 @@ It analyzes customer messages, detects sentiment and risk, recommends response t
 - Response tone recommendations.
 
 ### Conversation Escalation
+
 - Escalation for high-risk issues.
 - Escalation for repeated negative messages.
 - Escalation for unresolved negative conversations exceeding the configured threshold.
@@ -30,6 +34,7 @@ It analyzes customer messages, detects sentiment and risk, recommends response t
 - Structured escalation logging.
 
 ### Support Ticket Workflow
+
 - Extract customer, order, product, issue, contact, and evidence details.
 - Detect missing information.
 - Detect duplicate tickets.
@@ -40,6 +45,21 @@ It analyzes customer messages, detects sentiment and risk, recommends response t
 - Generate handoff summaries with masked contact details.
 - Record SLA breach escalation events.
 
+### Knowledge Base Update Pipeline
+
+- Document ingestion and knowledge update processing.
+- Knowledge quality checks and candidate validation.
+- Candidate approval workflows.
+- Role-based access control for viewer, contributor, approver, and admin.
+- Prompt-injection scanning and sensitive-data masking.
+- Knowledge version management and rollback support.
+- Persistent scheduler state and recovery after application restarts.
+- Retry handling for failed jobs.
+- Maintenance-window controls.
+- Health checks and interrupted-job recovery.
+- API authentication and startup validation.
+- Automated tests for authorization, scheduling, persistence, and recovery.
+
 ## 3. Technologies
 
 - Python
@@ -49,6 +69,7 @@ It analyzes customer messages, detects sentiment and risk, recommends response t
 - FastAPI
 - Pydantic
 - Pytest
+- JSON-based scheduler state persistence
 
 ## 4. Project Structure
 
@@ -75,13 +96,23 @@ MultilingualSentimentAnalysis/
 │   ├── routing.py
 │   ├── issue_grouping.py
 │   ├── handoff.py
-│   └── ticket_workflow.py
+│   ├── ticket_workflow.py
+│   ├── knowledge_auth.py
+│   ├── document_ingestion.py
+│   ├── knowledge_pipeline.py
+│   ├── knowledge_quality.py
+│   ├── knowledge_scheduler.py
+│   ├── knowledge_security.py
+│   ├── knowledge_versions.py
+│   └── knowledge_worker.py
 ├── tests/
 ├── requirements.txt
 ├── pytest.ini
 ├── .gitignore
 └── README.md
 ```
+
+*Note: This structure lists the expected project modules. Verify the filenames against your actual `app` directory before publishing the README.*
 
 ## 5. Installation
 
@@ -177,30 +208,54 @@ pprint(result)
 
 The workflow returns the ticket status, extracted details, missing information, duplicate detection result, SLA evaluation, priority, routing result, escalation result, issue grouping, and handoff summary.
 
-## 8. Running Tests
+## 8. Knowledge Base Update Pipeline
 
-Run the automated test suite from the project root:
+The knowledge-base modules support controlled knowledge updates, validation, authorization, scheduling, and recovery.
+
+The implementation includes:
+
+- Role-based permissions for knowledge operations.
+- Candidate validation and approval controls.
+- Security scanning and sensitive-data masking.
+- Knowledge version management and rollback.
+- Persistent scheduler state.
+- Recovery of interrupted updates.
+- Retry handling and health-check controls.
+- API authorization and startup validation.
+
+The scheduler and recovery behavior can be verified using the automated tests.
+
+## 9. Running Tests
+
+Run the complete automated test suite from the project root:
 
 ```powershell
 python -m pytest -q
 ```
 
-The project has passed 42 automated tests in the current development session. Run the command again after making changes to verify the latest code.
+The latest verified full-suite run passed **137 tests**, with one deprecation warning. Run the command again after code changes to verify the current result.
 
-## 9. Implementation Assumptions
+## 10. Implementation Assumptions
 
 - Business hours and SLA limits follow the values configured in the application.
 - SLA calculations depend on the configured business-hours, weekend, and holiday rules.
 - Agent routing depends on required skills, availability, workload, and on-call status.
 - Ticket extraction and certain risk or sentiment indicators use a combination of model predictions and rule-based logic.
+- Knowledge updates follow the configured validation, authorization, scheduling, and recovery rules.
+- Scheduler persistence depends on the configured state file and the application's runtime environment.
 
-## 10. Limitations
+## 11. Limitations
 
 - Rule-based extraction and detection can miss phrasing that does not match the implemented patterns.
 - The sentiment model can misclassify ambiguous or context-dependent messages.
 - Agent availability and workload are supplied to the workflow rather than retrieved from a live workforce system.
-- The project is a prototype and can be extended with persistent ticket storage, authentication, monitoring, and production deployment.
+- Model downloads may require an internet connection and can be affected by external service availability.
+- Production deployment, monitoring, persistent ticket storage, and integration with external systems may require additional configuration.
 
-## 11. Conclusion
+## 12. Conclusion
 
 This project demonstrates multilingual customer sentiment analysis and an automated support ticket workflow, including risk detection, escalation, SLA monitoring, duplicate detection, skill-based routing, issue grouping, and handoff summaries.
+
+It also implements a knowledge-base update pipeline with authorization, validation, version management, scheduler persistence, and recovery capabilities.
+
+The project uses automated tests to verify application behavior, security controls, API startup, scheduling, and recovery workflows.
