@@ -26,6 +26,10 @@ def load_documents(version_dir):
         if path.is_symlink() or not path.is_file():
             continue
 
+        # Metadata belongs to its document; never evaluate it as content.
+        if path.name.endswith(".metadata.json"):
+            continue
+
         if path.suffix.lower() not in {".txt", ".md", ".json", ".csv"}:
             continue
 

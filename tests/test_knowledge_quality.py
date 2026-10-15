@@ -1,7 +1,8 @@
 
 import pytest
 
-from app.knowledge_quality import KnowledgeQualityGate
+from app.knowledge_quality import KnowledgeQualityGate, load_documents
+
 
 
 def make_version(tmp_path, name, content):
@@ -130,3 +131,23 @@ def test_requires_test_cases(tmp_path):
 
     with pytest.raises(ValueError, match="At least one"):
         KnowledgeQualityGate().evaluate(candidate, [])
+
+
+
+def test_metadata_sidecar_is_not_loaded_as_document(tmp_path):
+    version_dir = make_version(
+        tmp_path,
+        "candidate",
+        "Refund requests must be submitted within 30 days.",
+    )
+    documents_dir = version_dir / "documents"
+
+    (documents_dir / "help.txt.metadata.json").write_text(
+        '{"product": "payments", "region": "IN"}',
+        encoding="utf-8",
+    )
+
+    documents = load_documents(version_dir)
+
+    assert list(documents) == ["help.txt"]
+    assert "30 days" in documents["help.txt"]
