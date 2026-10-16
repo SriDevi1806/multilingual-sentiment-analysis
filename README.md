@@ -78,7 +78,7 @@ The knowledge-management workflow supports document ingestion, quality validatio
 
 ## 4. Project Structure
 
-```text
+
 MultilingualSentimentAnalysis/
 ├── app/
 │   ├── api.py
@@ -87,6 +87,7 @@ MultilingualSentimentAnalysis/
 │   ├── sentiment.py
 │   ├── conversation.py
 │   ├── conversation_state.py
+│   ├── document_ingestion.py
 │   ├── escalation.py
 │   ├── escalation_log.py
 │   ├── response_tone.py
@@ -111,14 +112,26 @@ MultilingualSentimentAnalysis/
 │   ├── knowledge_versions.py
 │   └── knowledge_worker.py
 ├── tests/
+│   ├── test_knowledge_api_ask.py
+│   ├── test_knowledge_api_auth.py
+│   ├── test_knowledge_api_startup.py
+│   ├── test_knowledge_assistant.py
+│   ├── test_knowledge_auth.py
+│   ├── test_knowledge_ingestion.py
+│   ├── test_knowledge_pipeline.py
+│   ├── test_knowledge_quality.py
+│   ├── test_knowledge_scheduler.py
+│   ├── test_knowledge_scheduler_persistence.py
+│   ├── test_knowledge_security.py
+│   ├── test_knowledge_versions.py
+│   ├── test_knowledge_worker.py
+│   └── test_ticket_workflow.py
 ├── requirements.txt
 ├── pytest.ini
 ├── .gitignore
 └── README.md
-```
 
-The exact files and supporting directories may vary as development continues.
-
+The `app/` directory also contains some legacy test modules. The main automated test suite is under `tests/`.
 ## 5. Installation
 
 Run these commands from the project root.
@@ -235,7 +248,7 @@ Run all tests from the project root:
 python -m pytest -q
 ```
 
-The latest reported development run passed **173 tests**, with one Starlette test-client deprecation warning. Rerun the command after changes to confirm the current result.
+The latest verified full test run passed **173 tests**, with one Starlette test-client deprecation warning. This is the result of that run, not a guarantee about future changes. Rerun the test suite after making changes.
 
 Tests cover the existing sentiment and ticket workflow alongside knowledge retrieval, authorization, metadata validation, scheduling, persistence, version integrity, health checks, rollback, and interrupted-job recovery.
 
