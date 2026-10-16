@@ -9,6 +9,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.knowledge_security import ROLE_PERMISSIONS
 
+API_ROLES = {
+    "viewer",
+    "contributor",
+    "approver",
+    "admin",
+}
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -45,7 +51,7 @@ def _load_token_registry():
             or not isinstance(principal, dict)
             or not isinstance(principal.get("subject"), str)
             or not principal["subject"].strip()
-            or principal.get("role") not in ROLE_PERMISSIONS
+            or principal.get("role") not in API_ROLES
         ):
             raise HTTPException(
                 status_code=503,
@@ -110,3 +116,30 @@ def require_api_permission(principal, action):
         ) from exc
 
     return principal
+
+
+def authenticate_worker_service():
+    """Validate the dedicated worker service credential at startup."""
+    token = os.getenv("KNOWLEDGE_WORKER_TOKEN", "")
+    expected_hash = os.getenv("KNOWLEDGE_WORKER_TOKEN_SHA256", "")
+
+    if (
+        not token
+        or len(expected_hash) != 64
+        or any(c not in "0123456789abcdef" for c in expected_hash)
+    ):
+        raise RuntimeError(
+            "Knowledge worker service authentication is not configured"
+        )
+
+    supplied_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    if not hmac.compare_digest(supplied_hash, expected_hash):
+        raise RuntimeError(
+            "Knowledge worker service authentication failed"
+        )
+
+    return {
+        "subject": "knowledge-update-worker",
+        "role": "worker",
+    }

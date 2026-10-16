@@ -47,6 +47,7 @@ def test_worker_waits_for_due_job():
 
     assert worker.run_once(now) == []
 
+
 def test_worker_recovers_interrupted_jobs_before_processing():
     scheduler = KnowledgeScheduler(
         maintenance_start="02:00",
@@ -60,7 +61,7 @@ def test_worker_recovers_interrupted_jobs_before_processing():
             self.recovery_calls = 0
 
         def recover_interrupted_jobs(self, role, now):
-            assert role == "admin"
+            assert role == "worker"
             self.recovery_calls += 1
             return ["interrupted-job"]
 
@@ -98,10 +99,12 @@ def test_worker_does_not_process_jobs_when_recovery_fails():
     worker = KnowledgeUpdateWorker(pipeline)
 
     result = worker.run_once(now)
-    assert result == [{
-        "status": "recovery_failed",
-        "error_type": "RuntimeError",
-    }]
+    assert result == [
+        {
+            "status": "recovery_failed",
+            "error_type": "RuntimeError",
+        }
+    ]
     assert pipeline.recovery_calls == 1
 
     result = worker.run_once(now)

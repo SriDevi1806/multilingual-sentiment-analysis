@@ -24,6 +24,10 @@ ROLE_PERMISSIONS = {
         "rollback_update",
         "manage_users",
     },
+        "worker": {
+        "activate_update",
+        "rollback_update",
+    },
 }
 
 

@@ -16,8 +16,10 @@ from app.knowledge_assistant import KnowledgeAssistant
 from app.knowledge_auth import (
     get_current_principal,
     require_api_permission,
+    authenticate_worker_service,
 )
 from app.knowledge_pipeline import KnowledgeUpdatePipeline
+from app.knowledge_worker import KnowledgeUpdateWorker
 from app.main import process_conversation
 
 
@@ -48,7 +50,6 @@ def get_active_knowledge_assistant(pipeline):
             detail="Active knowledge version metadata is invalid",
         ) from exc
 
-    # JSON may be valid but still have the wrong structure.
     if not isinstance(active, dict):
         raise HTTPException(
             status_code=409,
@@ -85,7 +86,6 @@ def get_active_knowledge_assistant(pipeline):
             metadata_path.read_text(encoding="utf-8")
         )
 
-        # Prevent AttributeError for lists, strings, or null metadata.
         if not isinstance(metadata, dict):
             raise ValueError("Version metadata must be an object")
 
@@ -100,7 +100,6 @@ def get_active_knowledge_assistant(pipeline):
         if not isinstance(records, dict) or not records:
             raise ValueError("Version has no document records")
 
-        # Reject files missing from or added to the manifest.
         actual_entries = list(documents_dir.iterdir())
 
         if any(
@@ -133,7 +132,10 @@ def get_active_knowledge_assistant(pipeline):
 
             expected_hash = record.get("sha256")
 
-            if not isinstance(expected_hash, str):
+            if (
+                not isinstance(expected_hash, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", expected_hash)
+            ):
                 raise ValueError("Invalid document hash")
 
             actual_hash = hashlib.sha256(
@@ -162,16 +164,46 @@ def get_active_knowledge_assistant(pipeline):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Keep the worker disabled until its service identity and
-    # authenticated authorization lifecycle are implemented.
-    if os.getenv("KNOWLEDGE_WORKER_ENABLED", "false").lower() == "true":
+    """Start the background worker only when service authentication succeeds."""
+
+    enabled = (
+        os.getenv("KNOWLEDGE_WORKER_ENABLED", "false").lower()
+        == "true"
+    )
+
+    if not enabled:
+        app.state.knowledge_worker = None
+        yield
+        return
+
+    try:
+        principal = authenticate_worker_service()
+    except RuntimeError as exc:
         raise RuntimeError(
             "Knowledge worker requires authenticated authorization "
             "before it can be enabled."
+        ) from exc
+
+    if (
+        not isinstance(principal, dict)
+        or principal.get("role") != "worker"
+        or principal.get("subject") != "knowledge-update-worker"
+    ):
+        raise RuntimeError(
+            "Invalid knowledge worker service identity"
         )
 
-    app.state.knowledge_worker = None
-    yield
+    worker = KnowledgeUpdateWorker(get_pipeline())
+    app.state.knowledge_worker = worker
+
+    try:
+        worker.start()
+        yield
+    finally:
+        try:
+            worker.stop()
+        finally:
+            app.state.knowledge_worker = None
 
 
 app = FastAPI(
@@ -327,12 +359,18 @@ def knowledge_status(
     require_api_permission(principal, "view_status")
     pipeline = get_pipeline()
 
+    worker = getattr(app.state, "knowledge_worker", None)
+
     return {
         "knowledge_base": str(pipeline.root),
         "versions_directory_exists": pipeline.versions.versions_dir.is_dir(),
         "scheduled_jobs": len(pipeline.scheduler.jobs),
         "mapped_jobs": len(pipeline.jobs_to_versions),
-        "worker_enabled": False,
+        "worker_enabled": worker is not None,
+        "worker_running": (
+            worker is not None
+            and worker.is_running()
+        ),
     }
 
 
@@ -352,7 +390,6 @@ def upload_document(
             detail="Unsafe destination",
         )
 
-    # Exclusive creation prevents overwriting an existing upload.
     try:
         with destination.open(
             "x",
@@ -486,7 +523,6 @@ def ask_knowledge(
     request: KnowledgeAskRequest,
     principal=Depends(get_current_principal),
 ):
-    # Never trust a role supplied in the request body.
     require_api_permission(principal, "view_status")
 
     pipeline = get_pipeline()

@@ -3,12 +3,17 @@ import logging
 import threading
 from datetime import datetime
 
+
 logger = logging.getLogger(__name__)
 
 
 class KnowledgeUpdateWorker:
     """
     Background worker for approved knowledge-base updates.
+
+    The worker uses its dedicated service role rather than an API user's
+    role. It should be started only after the application's startup
+    authentication check succeeds.
 
     health_check(version_id) should return:
       True  -> version is healthy
@@ -26,8 +31,10 @@ class KnowledgeUpdateWorker:
             raise ValueError("Poll interval must be positive")
 
         self.pipeline = pipeline
+        self.role = "worker"
         self.health_check = health_check
         self.poll_interval_seconds = poll_interval_seconds
+
         self._stop_event = threading.Event()
         self._thread = None
         self._recovery_complete = False
@@ -49,20 +56,20 @@ class KnowledgeUpdateWorker:
             return True
 
         try:
-            recovered = recover(role="admin", now=now)
+            recovered = recover(role=self.role, now=now)
         except Exception as exc:
             logger.exception("Interrupted-job recovery failed")
-            outcomes.append({
-                "status": "recovery_failed",
-                "error_type": type(exc).__name__,
-            })
+            outcomes.append(
+                {
+                    "status": "recovery_failed",
+                    "error_type": type(exc).__name__,
+                }
+            )
             return False
 
         self._recovery_complete = True
 
-        recovered_count = (
-            len(recovered) if recovered is not None else 0
-        )
+        recovered_count = len(recovered) if recovered is not None else 0
         logger.info(
             "Interrupted-job recovery completed: %s job(s)",
             recovered_count,
@@ -88,13 +95,15 @@ class KnowledgeUpdateWorker:
                         try:
                             result = self.pipeline.activate_due(
                                 job_id=job_id,
-                                role="admin",
+                                role=self.role,
                                 now=now,
                             )
-                            outcomes.append({
-                                "job_id": job_id,
-                                "status": result.status,
-                            })
+                            outcomes.append(
+                                {
+                                    "job_id": job_id,
+                                    "status": result.status,
+                                }
+                            )
                         except Exception as exc:
                             # The pipeline should record activation failures
                             # and schedule retries through the scheduler.
@@ -102,11 +111,13 @@ class KnowledgeUpdateWorker:
                                 "Update activation failed for job %s",
                                 job_id,
                             )
-                            outcomes.append({
-                                "job_id": job_id,
-                                "status": "attempt_failed",
-                                "error_type": type(exc).__name__,
-                            })
+                            outcomes.append(
+                                {
+                                    "job_id": job_id,
+                                    "status": "attempt_failed",
+                                    "error_type": type(exc).__name__,
+                                }
+                            )
 
                 elif job.status == "health_check":
                     self._check_pending_health(
@@ -122,11 +133,13 @@ class KnowledgeUpdateWorker:
                     "Worker failed while processing %s",
                     job_id,
                 )
-                outcomes.append({
-                    "job_id": job_id,
-                    "status": "worker_error",
-                    "error_type": type(exc).__name__,
-                })
+                outcomes.append(
+                    {
+                        "job_id": job_id,
+                        "status": "worker_error",
+                        "error_type": type(exc).__name__,
+                    }
+                )
 
         return outcomes
 
@@ -144,27 +157,31 @@ class KnowledgeUpdateWorker:
             if healthy is not None:
                 result = self.pipeline.check_health(
                     job_id=job_id,
-                    role="admin",
+                    role=self.role,
                     now=now,
                     healthy=bool(healthy),
                 )
-                outcomes.append({
-                    "job_id": job_id,
-                    "status": result["status"],
-                })
+                outcomes.append(
+                    {
+                        "job_id": job_id,
+                        "status": result["status"],
+                    }
+                )
                 return
 
         # If no result arrived, check whether the health deadline expired.
         if job.health_deadline is not None and now >= job.health_deadline:
             result = self.pipeline.check_health_timeout(
                 job_id=job_id,
-                role="admin",
+                role=self.role,
                 now=now,
             )
-            outcomes.append({
-                "job_id": job_id,
-                "status": result["status"],
-            })
+            outcomes.append(
+                {
+                    "job_id": job_id,
+                    "status": result["status"],
+                }
+            )
 
     def start(self):
         """Start the worker in a background thread."""
