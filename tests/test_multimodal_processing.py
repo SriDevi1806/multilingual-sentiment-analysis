@@ -149,3 +149,42 @@ def test_extract_evidence_marks_prompt_injection_for_security_review(
     assert result["security"]["suspicious"] is True
     assert result["security"]["requires_review"] is True
     assert result["status"] == "rejected_for_security_review"
+
+
+def test_image_quality_detects_low_contrast():
+    image = Image.new("RGB", (120, 120), (128, 128, 128))
+
+    warnings = mp._check_image_quality(image)
+
+    assert "low_contrast" in warnings
+    assert "possible_blur" in warnings
+
+
+@pytest.mark.parametrize(
+    "color",
+    [
+        (0, 0, 0),        # Too dark
+        (255, 255, 255),  # Too bright
+    ],
+)
+def test_image_quality_detects_poor_lighting(color):
+    image = Image.new("RGB", (120, 120), color)
+
+    warnings = mp._check_image_quality(image)
+
+    assert "poor_lighting" in warnings
+    assert "low_contrast" in warnings
+
+
+def test_image_quality_returns_no_warnings_for_clear_contrasting_image():
+    image = Image.new("RGB", (120, 120), "black")
+
+    # Add a large, high-contrast white region.
+    for x in range(30, 90):
+        for y in range(30, 90):
+            image.putpixel((x, y), (255, 255, 255))
+
+    warnings = mp._check_image_quality(image)
+
+    assert "low_contrast" not in warnings
+    assert "poor_lighting" not in warnings
