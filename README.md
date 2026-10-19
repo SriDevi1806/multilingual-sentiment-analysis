@@ -1,11 +1,10 @@
-
 # Multilingual Sentiment Analysis and Support Ticket Workflow
 
 ## 1. Project Overview
 
-This project combines multilingual customer sentiment analysis, automated support ticket processing, and a versioned knowledge-base assistant.
+This project combines multilingual customer sentiment analysis, automated support ticket processing, multimodal evidence processing, and a versioned knowledge-base assistant.
 
-It analyzes customer conversations, detects sentiment and risks, recommends escalation, evaluates ticket SLAs, and retrieves policy information from authorized knowledge documents.
+It analyzes customer conversations, detects sentiment and risks, recommends escalation, evaluates ticket SLAs, processes supporting image/PDF evidence, and retrieves policy information from authorized knowledge documents.
 
 The knowledge-management workflow supports document ingestion, quality validation, versioned snapshots, approval and scheduling, controlled activation, health checks, rollback, and recovery after interrupted updates.
 
@@ -31,6 +30,21 @@ The knowledge-management workflow supports document ingestion, quality validatio
 - Group related issues and generate handoff summaries.
 - Mask contact details in supported handoff outputs.
 
+### Multimodal Evidence Processing
+- Process supported image and PDF evidence files.
+- Extract text from images using OCR.
+- Support scanned PDFs through page rendering and OCR.
+- Extract structured information, including order IDs and monetary amounts.
+- Validate files and enforce image and rendered-page safety limits.
+- Report extraction status and warnings for evidence-processing results.
+- Test OCR, PDF extraction, structured-field extraction, and validation behavior.
+
+### Background Processing and Evidence Verification
+- Track background evidence-processing jobs and their statuses.
+- Verify evidence-processing results through dedicated workflow components.
+- Apply configured retention rules to evidence files.
+- Test background job responses, evidence verification, and multimodal processing.
+
 ### Knowledge Ingestion and Quality
 - Load supported TXT, Markdown, JSON, and CSV knowledge documents.
 - Validate document metadata, including product, region, access level, effective date, and expiry date.
@@ -39,7 +53,7 @@ The knowledge-management workflow supports document ingestion, quality validatio
 - Evaluate candidate knowledge versions against supplied test cases.
 
 ### Versioning and Controlled Updates
-- Create immutable-style snapshots of accepted, unchanged documents.
+- Create snapshots of accepted, unchanged documents.
 - Store document SHA-256 hashes in version metadata.
 - Verify snapshot integrity before activation and rollback.
 - Track version history and activation events.
@@ -75,34 +89,27 @@ The knowledge-management workflow supports document ingestion, quality validatio
 - FastAPI
 - Pydantic
 - Pytest
+- OCR and PDF/image processing libraries configured in `requirements.txt`
 
 ## 4. Project Structure
 
-
+```text
 MultilingualSentimentAnalysis/
 ├── app/
-│   ├── api.py
-│   ├── main.py
 │   ├── analyzer.py
-│   ├── sentiment.py
+│   ├── api.py
+│   ├── background_processing.py
 │   ├── conversation.py
 │   ├── conversation_state.py
 │   ├── document_ingestion.py
-│   ├── escalation.py
-│   ├── escalation_log.py
-│   ├── response_tone.py
-│   ├── risk_detection.py
-│   ├── message_analysis.py
-│   ├── time_utils.py
-│   ├── ticket_extraction.py
-│   ├── missing_info.py
-│   ├── priority.py
-│   ├── sla.py
 │   ├── duplicate_detection.py
-│   ├── routing.py
-│   ├── issue_grouping.py
+│   ├── escalation.py
+│   ├── escalation_log.jsonl
+│   ├── escalation_log.py
+│   ├── evidence_verification.py
+│   ├── file_retention.py
 │   ├── handoff.py
-│   ├── ticket_workflow.py
+│   ├── issue_grouping.py
 │   ├── knowledge_assistant.py
 │   ├── knowledge_auth.py
 │   ├── knowledge_pipeline.py
@@ -110,8 +117,42 @@ MultilingualSentimentAnalysis/
 │   ├── knowledge_scheduler.py
 │   ├── knowledge_security.py
 │   ├── knowledge_versions.py
-│   └── knowledge_worker.py
+│   ├── knowledge_worker.py
+│   ├── main.py
+│   ├── message_analysis.py
+│   ├── missing_info.py
+│   ├── multimodal_processing.py
+│   ├── priority.py
+│   ├── response_tone.py
+│   ├── risk_detection.py
+│   ├── routing.py
+│   ├── sentiment.py
+│   ├── sla.py
+│   ├── test_analyzer.py
+│   ├── test_conversation.py
+│   ├── test_conversation_state.py
+│   ├── test_escalation.py
+│   ├── test_escalation_log.py
+│   ├── test_full_system.py
+│   ├── test_high_risk.py
+│   ├── test_high_risk_after_hours.py
+│   ├── test_message_analysis.py
+│   ├── test_multilingual.py
+│   ├── test_response_tone.py
+│   ├── test_risk_detection.py
+│   ├── test_sentiment.py
+│   ├── test_time_utils.py
+│   ├── ticket_extraction.py
+│   ├── ticket_workflow.py
+│   └── time_utils.py
 ├── tests/
+│   ├── test_analyzer.py
+│   ├── test_background_processing.py
+│   ├── test_conversation_state.py
+│   ├── test_escalation.py
+│   ├── test_evidence_job_response.py
+│   ├── test_evidence_verification.py
+│   ├── test_full_system.py
 │   ├── test_knowledge_api_ask.py
 │   ├── test_knowledge_api_auth.py
 │   ├── test_knowledge_api_startup.py
@@ -125,13 +166,18 @@ MultilingualSentimentAnalysis/
 │   ├── test_knowledge_security.py
 │   ├── test_knowledge_versions.py
 │   ├── test_knowledge_worker.py
+│   ├── test_multimodal_processing.py
+│   ├── test_risk_detection.py
+│   ├── test_sentiment.py
 │   └── test_ticket_workflow.py
 ├── requirements.txt
 ├── pytest.ini
 ├── .gitignore
 └── README.md
+```
 
-The `app/` directory also contains some legacy test modules. The main automated test suite is under `tests/`.
+The `app/` directory also contains legacy test modules. The dedicated automated test suite is under `tests/`.
+
 ## 5. Installation
 
 Run these commands from the project root.
@@ -166,7 +212,7 @@ Open the interactive API documentation:
 
 http://127.0.0.1:8000/docs
 
-### Core API endpoints
+### Core API Endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -215,6 +261,7 @@ Example request body for `POST /knowledge/ask`:
 The example illustrates the request fields; the result depends on the actual documents in the active knowledge version.
 
 The assistant:
+
 1. Requires an authenticated principal with permission to query knowledge.
 2. Validates the active version metadata and snapshot files.
 3. Verifies document hashes against the version manifest.
@@ -248,9 +295,9 @@ Run all tests from the project root:
 python -m pytest -q
 ```
 
-The latest verified full test run passed **206 tests**, with one Starlette test-client deprecation warning. This is the result of that run, not a guarantee about future changes. Rerun the test suite after making changes.
+The latest recorded full test run passed **217 tests**, with one Starlette test-client deprecation warning. This describes that specific run, not a guarantee about future changes. Rerun the test suite after making changes.
 
-Tests cover the existing sentiment and ticket workflow alongside knowledge retrieval, authorization, metadata validation, scheduling, persistence, version integrity, health checks, rollback, and interrupted-job recovery.
+Tests cover sentiment and ticket workflows, knowledge retrieval and authorization, metadata validation, scheduling, persistence, version integrity, health checks, rollback, interrupted-job recovery, background processing, evidence verification, and multimodal processing.
 
 ## 11. Implementation Assumptions
 
@@ -272,6 +319,6 @@ Tests cover the existing sentiment and ticket workflow alongside knowledge retri
 
 ## 13. Conclusion
 
-This project demonstrates an integrated multilingual customer-support workflow with sentiment analysis, risk detection, escalation, SLA management, ticket routing, and evidence-grounded knowledge retrieval.
+This project demonstrates an integrated multilingual customer-support workflow with sentiment analysis, risk detection, escalation, SLA management, ticket routing, multimodal evidence extraction, and evidence-grounded knowledge retrieval.
 
 Its knowledge-management components add controlled version updates, integrity checks, health monitoring, rollback, and restart recovery within the same training project.
