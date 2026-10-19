@@ -248,7 +248,7 @@ Run all tests from the project root:
 python -m pytest -q
 ```
 
-The latest verified full test run passed **173 tests**, with one Starlette test-client deprecation warning. This is the result of that run, not a guarantee about future changes. Rerun the test suite after making changes.
+The latest verified full test run passed **206 tests**, with one Starlette test-client deprecation warning. This is the result of that run, not a guarantee about future changes. Rerun the test suite after making changes.
 
 Tests cover the existing sentiment and ticket workflow alongside knowledge retrieval, authorization, metadata validation, scheduling, persistence, version integrity, health checks, rollback, and interrupted-job recovery.
 
