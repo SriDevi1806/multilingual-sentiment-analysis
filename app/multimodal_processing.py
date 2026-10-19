@@ -24,21 +24,79 @@ from app.knowledge_security import (
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_PDF_PAGES = 20
 MAX_IMAGE_PIXELS = 20_000_000
-ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
+
+ALLOWED_EXTENSIONS = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".pdf",
+}
+
 MIN_IMAGE_DIMENSION = 80
 MIN_IMAGE_CONTRAST = 8.0
 
-DEFAULT_TESSERACT_COMMAND = shutil.which("tesseract")
-
-if DEFAULT_TESSERACT_COMMAND:
-    pytesseract.pytesseract.tesseract_cmd = DEFAULT_TESSERACT_COMMAND
+WINDOWS_TESSERACT_PATH = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+)
 
 
 class MultimodalProcessingError(ValueError):
     """Raised when an uploaded evidence file cannot be processed safely."""
 
 
+def _configure_tesseract() -> str | None:
+    """
+    Configure Tesseract using the environment variable, PATH,
+    or the standard Windows installation location.
+    """
+    configured_path = os.getenv("TESSERACT_CMD")
+
+    if configured_path:
+        if not os.path.isfile(configured_path):
+            raise RuntimeError(
+                "Configured Tesseract executable was not found"
+            )
+
+        pytesseract.pytesseract.tesseract_cmd = configured_path
+        return configured_path
+
+    discovered_path = shutil.which("tesseract")
+
+    if discovered_path:
+        pytesseract.pytesseract.tesseract_cmd = discovered_path
+        return discovered_path
+
+    if os.path.isfile(WINDOWS_TESSERACT_PATH):
+        pytesseract.pytesseract.tesseract_cmd = (
+            WINDOWS_TESSERACT_PATH
+        )
+        return WINDOWS_TESSERACT_PATH
+
+    return None
+
+
+def _require_ocr_engine() -> None:
+    """Verify that the configured Tesseract executable works."""
+    executable = _configure_tesseract()
+
+    if not executable:
+        raise RuntimeError(
+            "Tesseract OCR is not installed or could not be found. "
+            "Set TESSERACT_CMD to the full path of tesseract.exe."
+        )
+
+    try:
+        pytesseract.get_tesseract_version()
+    except (pytesseract.TesseractNotFoundError, OSError) as exc:
+        raise RuntimeError(
+            "Tesseract OCR could not be started. "
+            "Check the TESSERACT_CMD configuration."
+        ) from exc
+
+
 def _validate_filename(filename: str) -> str:
+    """Validate a filename and return its lowercase extension."""
     if (
         not isinstance(filename, str)
         or not filename.strip()
@@ -54,29 +112,15 @@ def _validate_filename(filename: str) -> str:
     extension = Path(filename).suffix.lower()
 
     if extension not in ALLOWED_EXTENSIONS:
-        raise MultimodalProcessingError("Unsupported evidence file type")
+        raise MultimodalProcessingError(
+            "Unsupported evidence file type"
+        )
 
     return extension
 
 
-def _require_ocr_engine():
-    configured_path = os.getenv("TESSERACT_CMD")
-
-    if configured_path:
-        if not os.path.isfile(configured_path):
-            raise RuntimeError(
-                "Configured Tesseract executable was not found"
-            )
-
-        pytesseract.pytesseract.tesseract_cmd = configured_path
-
-    elif not shutil.which("tesseract"):
-        raise RuntimeError(
-            "Tesseract OCR is not installed or is not available on PATH"
-        )
-
-
 def _validate_image(data: bytes) -> Image.Image:
+    """Validate image format, dimensions, and image integrity."""
     try:
         with Image.open(io.BytesIO(data)) as probe:
             if probe.format not in {"PNG", "JPEG", "WEBP"}:
@@ -116,6 +160,7 @@ def _validate_image(data: bytes) -> Image.Image:
 
 
 def _check_image_quality(image: Image.Image) -> list[str]:
+    """Identify image characteristics that may reduce OCR accuracy."""
     warnings = []
     grayscale = image.convert("L")
 
@@ -139,6 +184,7 @@ def _check_image_quality(image: Image.Image) -> list[str]:
 
 
 def _extract_pdf(data: bytes) -> tuple[str, list[str]]:
+    """Extract text from a PDF, using OCR for pages without text."""
     warnings = []
     extracted_pages = []
 
@@ -149,7 +195,10 @@ def _extract_pdf(data: bytes) -> tuple[str, list[str]]:
                     "Encrypted PDFs are not accepted"
                 )
 
-            if pdf.page_count == 0 or pdf.page_count > MAX_PDF_PAGES:
+            if (
+                pdf.page_count == 0
+                or pdf.page_count > MAX_PDF_PAGES
+            ):
                 raise MultimodalProcessingError(
                     "PDF page count is outside the allowed limit"
                 )
@@ -186,7 +235,9 @@ def _extract_pdf(data: bytes) -> tuple[str, list[str]]:
 
 
 def extract_structured_fields(text: str) -> dict:
-    """Extract explicitly labelled or patterned values without guessing."""
+    """
+    Extract explicitly labelled or patterned values without guessing.
+    """
     if not isinstance(text, str):
         raise TypeError("text must be a string")
 
@@ -214,10 +265,13 @@ def extract_structured_fields(text: str) -> dict:
     result = {}
 
     for field, pattern in patterns.items():
-        matches = re.findall(pattern, text, flags=re.IGNORECASE)
+        matches = re.findall(
+            pattern,
+            text,
+            flags=re.IGNORECASE,
+        )
         result[field] = list(dict.fromkeys(matches))
 
-    # Extract products only when the source explicitly labels them.
     product_pattern = (
         r"^\s*(?:product(?:\s+name)?|item(?:\s+name)?)"
         r"\s*[:#-]\s*(.{2,120}?)\s*$"
@@ -241,14 +295,21 @@ def extract_structured_fields(text: str) -> dict:
 
 
 def extract_evidence(filename: str, data: bytes) -> dict:
-    """Validate evidence, extract OCR text, and screen suspicious content."""
+    """
+    Validate an uploaded image/PDF, extract text, identify structured
+    fields, mask sensitive text, and screen for prompt injection.
+    """
     extension = _validate_filename(filename)
 
     if not isinstance(data, bytes) or not data:
-        raise MultimodalProcessingError("Uploaded file is empty")
+        raise MultimodalProcessingError(
+            "Uploaded file is empty"
+        )
 
     if len(data) > MAX_UPLOAD_BYTES:
-        raise MultimodalProcessingError("Uploaded file exceeds 10 MB")
+        raise MultimodalProcessingError(
+            "Uploaded file exceeds 10 MB"
+        )
 
     if extension == ".pdf":
         extracted_text, warnings = _extract_pdf(data)
@@ -259,7 +320,8 @@ def extract_evidence(filename: str, data: bytes) -> dict:
         extracted_text = pytesseract.image_to_string(image)
 
     extracted_text = unicodedata.normalize(
-        "NFKC", extracted_text
+        "NFKC",
+        extracted_text,
     ).strip()
 
     if not extracted_text:
@@ -267,13 +329,20 @@ def extract_evidence(filename: str, data: bytes) -> dict:
 
     injection = scan_prompt_injection(extracted_text)
 
-    # Keep structured extraction separate from the masked text returned
-    # to the caller. Never log the original OCR text.
+    # Keep structured extraction separate from the masked text.
+    # Do not log the original OCR text.
     structured_fields = extract_structured_fields(extracted_text)
     safe_text = mask_sensitive_data(extracted_text)
 
     suspicious = bool(injection.suspicious)
     needs_clarification = bool(warnings)
+
+    if suspicious:
+        status = "rejected_for_security_review"
+    elif needs_clarification:
+        status = "needs_clarification"
+    else:
+        status = "extracted"
 
     return {
         "filename": Path(filename).name,
@@ -286,11 +355,5 @@ def extract_evidence(filename: str, data: bytes) -> dict:
             "findings": injection.findings,
             "requires_review": injection.requires_review,
         },
-        "status": (
-            "rejected_for_security_review"
-            if suspicious
-            else "needs_clarification"
-            if needs_clarification
-            else "extracted"
-        ),
+        "status": status,
     }
