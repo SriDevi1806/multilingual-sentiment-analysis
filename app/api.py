@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 import uuid
+from app.conversation_state import ConversationSessionManager
 
 from contextlib import asynccontextmanager
 from datetime import date, datetime
@@ -43,6 +44,7 @@ from app.background_processing import BackgroundProcessingQueue
 
 
 logger = logging.getLogger(__name__)
+chat_sessions = ConversationSessionManager()
 
 MAX_EVIDENCE_BYTES = 10 * 1024 * 1024
 MAX_CUSTOMER_MESSAGE_LENGTH = 10_000
@@ -766,6 +768,18 @@ def analyze(request: ConversationRequest):
             detail=str(exc),
         ) from exc
 
+class ChatMessageRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=10_000)
+    current_time: datetime | None = None
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("Message cannot be blank")
+        return value
+
 
 @app.get("/knowledge/status")
 def knowledge_status(
@@ -1185,3 +1199,37 @@ def cleanup_evidence_files(
         "status": "completed",
         "result": "Retention cleanup finished",
     }
+
+
+
+@app.post("/chat/message")
+def chat_message(
+    request: ChatMessageRequest,
+    principal=Depends(get_current_principal),
+):
+    customer_id = _get_customer_id(principal)
+
+    try:
+        return chat_sessions.handle_message(
+            customer_id=customer_id,
+            message=request.message,
+            current_time=request.current_time,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+
+@app.get("/chat/session")
+def chat_session_status(
+    principal=Depends(get_current_principal),
+):
+    customer_id = _get_customer_id(principal)
+    session = chat_sessions.get_session(customer_id)
+
+    if session is None:
+        return {"status": "no_active_session"}
+
+    return {"status": "active", **session}
