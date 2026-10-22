@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from difflib import get_close_matches
 
 
-
 def _parse_time(value=None):
     """Parse a datetime or ISO-formatted string."""
     if value is None:
@@ -93,7 +92,6 @@ class ConversationState:
         elapsed = current_time - self.negative_started_at
 
         return elapsed.total_seconds() / 60
-
 
 
 DEFAULT_LANGUAGES = ("en", "hi", "te", "es", "fr", "de")
@@ -287,7 +285,6 @@ FUZZY_INTENTS = {
     "cancel": "cancel",
     "complaint": "complaint",
 }
-
 
 
 def _detect_intents(message):
