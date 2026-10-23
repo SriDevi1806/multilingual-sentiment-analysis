@@ -155,13 +155,10 @@ Testing covers the following areas:
 
 ### Latest verified test result
 
-**237 tests passed, with 1 warning, in 30.12 seconds.**
+**237 tests passed, with 1 warning, in 29.93 seconds.**
 
 The warning concerns the deprecated use of `httpx` with Starlette's test client. The test suite completed successfully despite this warning.
-
-The project was also checked for Python syntax issues, dependency inconsistencies, and Git whitespace errors during the final cleanup process.
-
-Passing automated tests provides evidence for the behaviors covered by those tests. It does not independently establish that every external evaluation requirement has been satisfied.
+The project was checked for Git whitespace errors using git diff --check. Passing automated tests provides evidence for the behaviors covered by those tests. It does not independently establish that every external evaluation requirement has been satisfied.
 
 ## 6. Development Challenges and Solutions
 
