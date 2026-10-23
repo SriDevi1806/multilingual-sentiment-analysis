@@ -8,6 +8,9 @@ It analyzes customer conversations, detects sentiment and risks, recommends esca
 
 The knowledge-management workflow supports document ingestion, quality validation, versioned snapshots, approval and scheduling, controlled activation, health checks, rollback, and recovery after interrupted updates.
 
+The latest verified full test run passed **237 tests**, with one Starlette test-client deprecation warning. This result reflects that specific run; rerun the test suite after making changes.
+
+
 ## 2. Key Features
 
 ### Multilingual Sentiment Analysis
