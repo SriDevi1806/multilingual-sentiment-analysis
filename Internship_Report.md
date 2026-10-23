@@ -1,375 +1,253 @@
-Report
 
-Project Title
+# Internship Project Report
 
-Multilingual Sentiment Analysis and Escalation System
+## Project Title
+**Multilingual Sentiment Analysis and Support Ticket Workflow**
 
-1. Introduction
+## 1. Introduction
 
-Customer support conversations can contain different emotions, levels of urgency, sarcasm, frustration, and high-risk situations. Identifying these signals correctly can help support teams respond appropriately and escalate critical cases when necessary.
+Customer support teams receive messages containing different emotions, urgency levels, complaints, and potentially high-risk issues. Handling these conversations effectively requires more than basic sentiment classification.
 
-As part of this internship task, I developed a multilingual customer conversation analysis system using Python and a transformer-based multilingual sentiment model.
+This project combines multilingual sentiment analysis, risk detection, escalation management, support-ticket processing, evidence handling, and a versioned knowledge-base assistant in a single Python application.
 
-The system analyzes individual messages as well as conversation history. It identifies sentiment, frustration, urgency, sarcasm, and high-risk situations. Based on these conditions, it determines an appropriate response tone and escalation action.
+The system uses machine-learning predictions, rule-based business logic, conversation state, configurable workflows, and REST APIs to support customer-service operations.
 
-The project also includes time-based escalation handling, structured escalation logging, and a FastAPI interface for testing the complete system.
+The internship work extends the existing training project rather than creating an unrelated project.
 
+## 2. Project Objectives
 
-2. Background
+The primary objectives are:
 
-The project focuses on applying Natural Language Processing (NLP) and rule-based decision logic to customer support conversations.
+- Analyze customer messages in multiple languages.
+- Identify sentiment, frustration, urgency, sarcasm, and high-risk issues.
+- Track conversation history and unresolved complaints.
+- Apply time-based escalation and business-hour rules.
+- Extract and process support-ticket information.
+- Support evidence-processing workflows and background jobs.
+- Manage knowledge documents with validation, authorization, versioning, and approval workflows.
+- Retrieve relevant information from authorized knowledge documents.
+- Maintain conversation context and session isolation.
+- Provide APIs for integration and testing.
+- Validate the implementation through automated unit, integration, and edge-case tests.
 
-A multilingual transformer model, (`cardiffnlp/twitter-xlm-roberta-base-sentiment`), was used for sentiment analysis.
+## 3. Technology Stack
 
-The system was designed to identify:
+- **Programming language:** Python
+- **NLP model:** CardiffNLP XLM-RoBERTa sentiment model
+- **Machine learning libraries:** Hugging Face Transformers and PyTorch
+- **API framework:** FastAPI
+- **Data validation:** Pydantic
+- **Testing:** Pytest
+- **Data persistence:** JSON-based state and configuration where implemented
+- **Version control:** Git and GitHub
+- **Development environment:** Visual Studio Code
 
-Positive sentiment
-Neutral sentiment
-Negative sentiment
-Frustration
-Urgency
-Sarcasm
-Account compromise
-Duplicate payment
-Legal threats
+## 4. Project Modules and Implemented Features
 
-The sentiment analysis is combined with rule-based detection and conversation-state tracking to determine whether a conversation should be escalated.
+### 4.1 Multilingual Sentiment Analysis
 
-The system also supports simulated timestamps so that time-dependent conditions can be tested without waiting in real time.
+The system uses a pretrained multilingual transformer model to classify customer messages.
 
-3. Learning Objectives
+The analysis returns sentiment labels and confidence information. The project includes testing for English, Hindi, and Telugu messages.
 
-The main learning objectives of this project were:
+A targeted rule-based correction layer handles selected phrases for which the model may produce an incorrect prediction.
 
-Understand practical Natural Language Processing concepts.
-Learn how to use a pretrained transformer model for sentiment analysis.
-Implement multilingual text analysis.
-Understand confidence scores from machine learning models.
-Analyze individual messages and conversation history.
-Implement rule-based classification and risk detection.
-Design escalation conditions for customer support scenarios.
-Implement time-based business rules.
-Track unresolved negative conversations.
-Build a REST API using FastAPI.
-Test machine learning and rule-based components independently.
-Perform integration and edge-case testing.
-Document and organize a complete software project.
+The implementation combines machine-learning output with deterministic rules instead of relying exclusively on sentiment predictions.
 
-4. Activities and Tasks
+### 4.2 Frustration, Urgency, and Sarcasm Detection
 
-Sentiment Analysis
+Rule-based detectors identify selected expressions indicating frustration, urgency, and sarcasm.
 
-A multilingual XLM-RoBERTa sentiment model was integrated using the Hugging Face Transformers library.
+Examples include repeated complaints, requests for immediate assistance, and sarcastic statements that might otherwise be classified as positive.
 
-The system returns:
+These signals contribute to the overall analysis and help determine the appropriate response tone and escalation action.
 
-Sentiment label
-Confidence score
+### 4.3 High-Risk Detection and Escalation
 
-The model was tested using English, Hindi, and Telugu messages.
+The risk-detection component identifies configured high-risk situations, including account compromise, duplicate payments, and legal threats.
 
-Example:
+Escalation decisions consider relevant risk signals, conversation history, urgency, sentiment, and configured timing conditions.
 
-English:
-I am very happy with your service.
-Result: Positive
+The implementation supports business-hour and after-hours handling. Urgent after-hours complaints can be directed to an on-call queue, while normal negative complaints can be scheduled for the next working day.
 
-Frustration Detection
+The system also tracks unresolved negative conversations and supports simulated timestamps for testing time-dependent rules.
 
-A rule-based frustration detector was implemented using predefined phrases.
+### 4.4 Conversation and Session Management
 
-Examples include:
+The conversation workflow maintains context across messages and supports language switching and mixed-language interactions.
 
-Nobody is helping
-Already told you
-Still waiting
-This is ridiculous
-Tired of waiting
+The implemented workflow includes support for:
 
-The detector marks the conversation as frustrated when these expressions are identified.
+- Maintaining recent conversation context.
+- Preserving relevant identifiers, such as names, order IDs, dates, and product codes.
+- Isolating separate sessions.
+- Handling corrections and multiple requests.
+- Managing inactivity and conversation restoration according to configured rules.
+- Requesting clarification when confidence is insufficient.
 
-Urgency Detection
+These features help prevent information from one conversation from incorrectly affecting another.
 
-Urgency detection was implemented using predefined urgent expressions.
+### 4.5 Support-Ticket Processing
 
-Examples include:
+The ticket workflow supports extracting relevant information from customer messages and identifying missing information.
 
-Urgent
-Immediately
-ASAP
-Right now
-Emergency
-Critical
+It includes ticket prioritization, duplicate detection, grouping or routing logic, and service-level agreement (SLA) evaluation.
 
-Urgency is combined with sentiment, frustration, and time information when determining escalation.
+The workflow also includes configured handling for business hours, weekends, holidays, and SLA thresholds.
 
-Sarcasm Detection
+Sensitive information masking is included in the ticket-processing workflow where implemented.
 
-A rule-based sarcasm detector was implemented for common sarcastic expressions.
+### 4.6 Evidence Processing and Background Jobs
 
-Examples include:
+The project includes an evidence-processing workflow for handling submitted files and related processing jobs.
 
-Wow, amazing service
-Thanks for nothing
-Great job
-Excellent service
+The implementation includes validation and security checks, image-quality checks, asynchronous job processing, job-status handling, and evidence-related verification.
 
-A correction mechanism was also implemented so that an obviously sarcastic positive prediction can be interpreted as negative.
+Background processing is designed to manage queued work without requiring every operation to complete during the initial API request.
 
-High-Risk Issue Detection
+The associated tests cover important validation, status, and processing scenarios.
 
-A risk detection module was implemented for critical customer-support situations.
+### 4.7 Knowledge Assistant and Knowledge Management
 
-The system identifies:
+The project includes a knowledge assistant that works with authorized knowledge documents.
 
-Account compromise
-Duplicate payment
-Legal threats
+The knowledge-management workflow includes document ingestion, quality validation, versioned snapshots, controlled updates, approval, and scheduling.
 
-These conditions automatically trigger escalation.
+Authorization controls distinguish roles and permitted operations. The system also includes checks for document security and prompt-injection-related risks.
 
-Conversation Analysis
+Versioning and persistence mechanisms support tracking knowledge changes and recovering or restoring appropriate versions where supported.
 
-The system analyzes the conversation history instead of considering only the latest message.
+The knowledge assistant can retrieve relevant information from the managed knowledge base to support customer-service responses.
 
-It tracks:
+### 4.8 Knowledge Scheduling and Reliability
 
-Total messages
-Negative messages
-Frustrated messages
-Urgent messages
+The knowledge workflow includes scheduling and persisted scheduler state.
 
-This allows repeated negative messages to trigger escalation.
+Additional reliability features include configured retries, maintenance-window handling, health checks, and recovery-related behavior.
 
-Conversation-State Tracking
+These mechanisms help manage scheduled updates and background operations in a more controlled manner.
 
-A conversation-state component was implemented to track how long a negative conversation remains unresolved.
+### 4.9 FastAPI Integration
 
-The system calculates the elapsed time between the beginning of the negative conversation and the current simulated time.
+FastAPI exposes the project's functionality through REST endpoints.
 
-If the negative conversation remains unresolved for more than 15 minutes, escalation is triggered.
+The API supports testing the implemented analysis and workflow features. Interactive API documentation can be accessed through Swagger UI when the application is running.
 
-Time-Based Escalation
+The API layer uses request validation and appropriate response handling for supported operations.
 
-Business-hour and after-hours logic was implemented.
+## 5. Testing and Validation
 
-The project uses the following implementation assumption:
+Pytest is used to validate the project through unit, integration, and edge-case tests.
 
-Business Hours: 09:00 – 18:00
+Testing covers the following areas:
 
-The system handles:
+- Sentiment classification and multilingual examples.
+- Frustration, urgency, sarcasm, and risk detection.
+- Conversation analysis and escalation decisions.
+- Conversation context, session isolation, and state management.
+- Support-ticket extraction, routing, duplicate detection, and SLA handling.
+- Evidence validation and processing.
+- Knowledge ingestion, authorization, security, and versioning.
+- Knowledge scheduling, persistence, and recovery.
+- API behavior and full-system integration.
 
-Urgent complaints during business hours
-Urgent complaints outside business hours
-Normal complaints outside business hours
-Simulated time changes
 
-Urgent complaints received outside business hours are placed in the on_call queue.
 
-Normal negative complaints received outside business hours are scheduled for the next_working_day.
+### Latest verified test result
 
-Response Tone Adjustment
+**237 tests passed, with 1 warning, in 30.12 seconds.**
 
-A response-tone module was implemented to determine an appropriate communication tone.
+The warning concerns the deprecated use of `httpx` with Starlette's test client. The test suite completed successfully despite this warning.
 
-Condition	Tone
-Positive	Friendly
-Neutral	Professional
-Negative	Empathetic
-Frustrated	Empathetic
-Urgent	Urgent and reassuring
-Sarcastic	Empathetic
-High-risk	Serious and reassuring
+The project was also checked for Python syntax issues, dependency inconsistencies, and Git whitespace errors during the final cleanup process.
 
-The tone adjustment does not change the underlying business policy.
+Passing automated tests provides evidence for the behaviors covered by those tests. It does not independently establish that every external evaluation requirement has been satisfied.
 
-Escalation Logging
+## 6. Development Challenges and Solutions
 
-A structured escalation logging component was implemented.
+### Multilingual classification
 
-Each escalation record contains:
+A pretrained model may misclassify some phrases, especially when language patterns are less well represented.
 
-Timestamp
-Escalation status
-Reason
-Activated condition
-Queue
-Conversation summary
+**Solution:** Combine model predictions with targeted rules and test representative positive and negative examples.
 
-This makes the escalation decision traceable and easier to review.
+### Time-dependent escalation
 
-FastAPI Integration
+Waiting for real time to pass makes testing escalation conditions inefficient.
 
-The completed system was exposed through a FastAPI REST API.
+**Solution:** Use simulated timestamps to test elapsed-time and business-hour conditions.
 
-The API provides:
+### Risk detection beyond sentiment
 
-GET /
-POST /analyze
+A serious security or payment issue may be expressed in neutral language.
 
-Swagger UI was used to test the API interactively.
+**Solution:** Evaluate configured high-risk indicators separately from sentiment.
 
-The API returns the complete analysis including sentiment, confidence, conversation statistics, response tone, escalation details, and escalation log.
+### Conversation continuity
 
-Testing and Experiments
+Customer messages can contain corrections, mixed languages, and references to earlier information.
 
-Multiple independent and integration tests were created.
+**Solution:** Maintain conversation context and session state, and test relevant context-preservation scenarios.
 
-Testing covered:
+### Knowledge integrity and access control
 
-Sentiment analysis
-Multilingual sentiment
-Message analysis
-Conversation analysis
-Conversation state
-Escalation rules
-Escalation logging
-High-risk issues
-Response tone
-Risk detection
-Time handling
-Full-system integration
+Knowledge updates require controlled access, validation, and traceability.
 
-Additional edge-case testing included:
+**Solution:** Implement role-based permissions, document validation, version management, and approval-related workflows.
 
-High-risk issues with calm language
-Urgent complaints during business hours
-Urgent complaints outside business hours
-Normal complaints outside business hours
-Repeated negative messages
-Negative conversations unresolved for more than 15 minutes
-Sarcastic messages
-Multilingual messages
+### Background processing
 
-Skills and Competencies
+Some evidence and knowledge operations require processing beyond the initial request.
 
-Through this project, I developed and practiced the following skills:
+**Solution:** Use queued background processing and job-status mechanisms for supported operations.
 
-Python programming
-Natural Language Processing
-Transformer models
-Hugging Face Transformers
-XLM-RoBERTa
-PyTorch
-Rule-based text classification
-Sentiment analysis
-FastAPI
-REST API development
-Pydantic
-Time-based logic
-Conversation-state management
-API testing
-Integration testing
-Problem-Solving Skills
-Breaking a complex requirement into smaller modules
-Designing rule-based escalation logic
-Handling edge cases
-Debugging model predictions
-Testing simulated time conditions
-Combining machine-learning predictions with deterministic rules
-Documentation Skills
-Writing project documentation
-Creating a README
-Documenting assumptions and limitations
-Recording testing results
-Preparing technical project reports
+## 7. GitHub and Documentation
 
-Feedback and Evidence
+The project is maintained in the following GitHub repository:
 
-The project was tested using multiple scenarios covering the major requirements of the task.
+https://github.com/SriDevi1806/multilingual-sentiment-analysis
 
-Evidence collected during development includes:
+The repository contains the application code, tests, dependency information, README, and project documentation.
 
-Successful sentiment analysis results
-Multilingual English, Hindi, and Telugu testing
-Successful escalation test cases
-High-risk detection results
-After-hours escalation results
-15-minute unresolved conversation testing
-Sarcasm detection results
-FastAPI Swagger interface
-Full-system integration results
+The project was committed and pushed to the `main` branch. The latest verified Git status showed the local branch synchronized with `origin/main` and no uncommitted changes.
 
-The project was tested using simulated timestamps to verify time-dependent escalation conditions.
+## 8. Skills Developed
 
-Screenshots of the successful tests and API responses can be included as supporting evidence.
+The project provided practical experience in:
 
-Challenges and Solutions
-1: Multilingual Sentiment Classification
+- Python application development.
+- Natural Language Processing and transformer models.
+- Multilingual sentiment analysis.
+- Rule-based classification and escalation.
+- REST API development with FastAPI.
+- Conversation and session-state management.
+- Support-ticket processing and SLA logic.
+- File validation and background processing.
+- Access control and knowledge management.
+- Version control and GitHub collaboration.
+- Automated testing and debugging.
+- Technical documentation and software verification.
 
-The sentiment model correctly handled many English and Hindi examples, but one Telugu negative phrase was incorrectly classified as positive.
+## 9. Limitations and Future Improvements
 
-Solution
+Potential improvements include:
 
-The multilingual model was retained as the primary sentiment model, and a small targeted correction layer was added for clearly identifiable multilingual phrases.
+- Evaluating sentiment performance against a larger, representative multilingual dataset.
+- Measuring precision, recall, and F1-score for relevant classifications.
+- Improving sarcasm and contextual risk detection.
+- Optimizing SLA calculations for larger workloads.
+- Resolving the remaining test-client deprecation warning through compatible dependency management.
+- Expanding integration and deployment testing.
+- Adding further monitoring and operational metrics.
 
-Additional Telugu positive and negative examples were tested to verify the behavior.
+These are potential improvements and should not be interpreted as completed features unless they have been implemented and verified.
 
-2: Time-Based Escalation Testing
+## 10. Conclusion
 
-Waiting 15 minutes in real time for every test would be inefficient.
+The project extends a multilingual sentiment-analysis training application into a broader customer-support workflow system.
 
-Solution
+It combines sentiment and risk analysis with conversation management, ticket processing, evidence workflows, and controlled knowledge management.
 
-A simulated timestamp mechanism was implemented. This allowed the system to test different times and durations without waiting in real time.
+Automated tests provide evidence that the implemented components work for the tested scenarios. The project also demonstrates the practical integration of machine-learning predictions with deterministic business rules and API-based application development.
 
-3: Combining Machine Learning with Business Rules
-
-Sentiment alone cannot determine whether a customer issue should be escalated.
-
-For example, an account-compromise message can be neutral in sentiment but still require immediate escalation.
-
-Solution
-
-The sentiment model was combined with deterministic risk and escalation rules.
-
-4: Sarcastic Messages
-
-Some sarcastic messages can appear positive to a sentiment model.
-
-For example:
-
-Wow, amazing service. I've only waited 10 days.
-Solution
-
-A rule-based sarcasm detector was implemented and used to adjust the final sentiment when appropriate.
-
-5: After-Hours Escalation
-
-Different actions are required for urgent and normal complaints outside business hours.
-
-Solution
-
-Business-hour detection and separate queues were implemented:
-
-on_call for urgent after-hours complaints
-next_working_day for normal after-hours complaints
-
-Outcomes and Impact
-
-The completed system provides an integrated approach to customer conversation analysis.
-
-The system can:
-
-Analyze multilingual customer messages.
-Generate sentiment and confidence scores.
-Detect frustration, urgency, and sarcasm.
-Identify high-risk customer issues.
-Analyze conversation history.
-Track unresolved negative conversations.
-Adjust response tone.
-Automatically determine escalation conditions.
-Route urgent after-hours complaints to an on-call queue.
-Schedule normal after-hours complaints for the next working day.
-Generate structured escalation records.
-Provide the functionality through a REST API.
-
-The project demonstrates how machine-learning predictions can be combined with deterministic business rules to create a practical customer-support automation system.
-
-Conclusion
-
-This internship project provided practical experience in Natural Language Processing, multilingual sentiment analysis, transformer models, rule-based classification, API development, time-based processing, and system testing.
-
-The final system combines machine-learning-based sentiment analysis with conversation analysis, risk detection, response-tone adjustment, and automated escalation.
-
-The project also provided experience in debugging model behavior, designing edge-case tests, documenting assumptions, and integrating multiple components into a single working application.
+The final submission should include the verified project repository, accurate documentation, required supporting materials, and a clear demonstration of the application running.

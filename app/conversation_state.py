@@ -110,13 +110,15 @@ LANGUAGE_TERMS = {
         "namaste", "namaskar", "mera", "mujhe", "chahiye",
         "kyun", "kya", "nahi", "hai", "kripya", "dhanyavad",
         "paisa", "madad", "paisa wapas", "kaise", "kab",
-        "mera order",
+        "mera order", "karo", "karna hai", "kar do",
+        "mera refund",
     ),
     "te": (
         "namaskaram", "naaku", "kavali", "ledu", "enduku",
         "emi", "cheppandi", "sahayam", "dhanyavadalu",
         "bagundi", "dabbu tirigi", "naa order", "ekkada",
-        "dayachesi",
+        "dayachesi", "cheyyandi", "cheyandi", "cheyyali",
+        "cheyali",
     ),
     "es": (
         "hola", "gracias", "necesito", "ayuda", "pedido",
